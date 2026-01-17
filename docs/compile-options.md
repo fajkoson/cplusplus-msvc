@@ -132,8 +132,65 @@ and **when you would normally use it**, even if you are new to C++ or MSVC.
 | `/GS-` | Disables stack security checks (not recommended). |
 
 ---
+## Security / Hardening Options
 
-*(… continues cleanly for CRT, Debug, Conformance, CPU, Security, Sanitizers — I can finish the remaining sections in the same style if you want.)*
+These options help **detect vulnerabilities**, **mitigate exploitation**, and **enforce safer coding practices** at compile time and runtime.
+
+| Option | Explanation |
+|------|-------------|
+| `/GS` | Enables **stack buffer security checks**. The compiler inserts runtime checks that detect stack buffer overflows before they can be exploited. This is enabled by default in most modern MSVC configurations and should almost never be disabled. |
+| `/GS-` | Disables stack buffer security checks. This slightly improves performance but **removes protection against stack-based buffer overflows**. Strongly discouraged except for very low-level or performance-critical code where safety is manually guaranteed. |
+| `/sdl` | Enables **Security Development Lifecycle (SDL) checks**. Adds extra compile-time and runtime checks that detect insecure coding patterns, unsafe APIs, and potential vulnerabilities. Recommended for applications exposed to untrusted input. |
+| `/Qspectre` | Enables **Spectre Variant 1 mitigations**. The compiler inserts barriers and safer code patterns to reduce the risk of speculative execution attacks on modern CPUs. Recommended for security-sensitive software. |
+| `/Qspectre-load` | Applies Spectre mitigations specifically to load instructions. Used when finer control over mitigation scope is needed. |
+| `/Qspectre-load-cf` | Applies Spectre mitigations to both loads and control flow. More secure, but may have a slightly higher performance cost. |
+| `/guard:cf` | Enables **Control Flow Guard (CFG)**. Inserts runtime checks that ensure indirect function calls only go to valid, expected targets, making exploits like function pointer hijacking much harder. |
+| `/guard:cf-` | Disables Control Flow Guard. Not recommended unless compatibility or performance constraints require it. |
+| `/guard:ehcont` | Enables **exception handler continuation protection**, preventing attackers from redirecting execution during exception unwinding. |
+| `/analyze` | Runs **static code analysis** during compilation. Detects common bugs such as null dereferences, resource leaks, and security issues without running the program. |
+| `/analyze:only` | Runs static analysis without producing binaries. Useful in CI pipelines focused purely on code quality and security checks. |
+| `/analyze:quiet` | Reduces verbosity of static analysis output, making reports easier to read. |
+
+---
+
+## Sanitizers (Runtime Error Detection)
+
+Sanitizers instrument the compiled program to **detect bugs at runtime** that are otherwise very hard to find.  
+These options are **toolset-dependent** and usually available in newer MSVC versions and x64 builds.
+
+| Option | Explanation |
+|------|-------------|
+| `/fsanitize=address` | Enables **AddressSanitizer (ASan)**. Detects memory errors such as buffer overflows, use-after-free, heap corruption, and stack out-of-bounds accesses at runtime. Extremely effective for finding serious bugs during testing. |
+| `/fsanitize=undefined` | Enables **Undefined Behavior Sanitizer (UBSan)**. Detects operations that have undefined behavior in C++, such as signed integer overflow, invalid shifts, and null pointer dereferences. Support in MSVC is more limited than in Clang/GCC. |
+| `/fsanitize=fuzzer` | Instruments code for fuzz testing by exposing entry points to fuzzers. Used mainly in security testing and robustness validation. |
+| `/fsanitize=address /Zi` | Combination commonly used to allow AddressSanitizer reports to include precise source-level debugging information. |
+| `/fsanitize=address /Od` | Recommended combination for debugging memory issues, as disabling optimizations improves diagnostic accuracy. |
+
+---
+
+## Practical Recommendations
+
+| Scenario | Recommended Options |
+|--------|---------------------|
+| General desktop app | `/GS /sdl /guard:cf` |
+| Security-sensitive software | `/GS /sdl /guard:cf /Qspectre` |
+| Debugging memory bugs | `/fsanitize=address /Zi /Od` |
+| CI static analysis | `/analyze /WX` |
+| Legacy compatibility | Avoid disabling security features unless strictly necessary |
+
+---
+
+## Important Notes
+
+- Sanitizers **increase binary size and slow execution** — use them for testing, not production.
+- Security flags often require **linker support**; ensure the linker is not disabling them.
+- `/GS`, `/sdl`, and `/guard:cf` are generally safe defaults for modern Windows software.
+- Some security options require **Windows 10+ and x64** targets.
+
+---
+
+*Last updated: 2026*
+
 
 
 
